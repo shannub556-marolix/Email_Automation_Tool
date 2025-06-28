@@ -1,0 +1,150 @@
+Backend 
+
+Build a production-ready FastAPI backend for an automated email sender with the following features:
+
+### 1. Authentication
+- JWT-based login and registration (email + password)
+- Use bcrypt for password hashing
+- Use PyJWT to issue tokens
+- Protect all private routes via token
+
+### 2. SMTP Credential Validation
+- New route: POST /smtp/validate
+  - Input: SMTP_EMAIL, SMTP_PASSWORD
+  - Try logging in via SMTP (e.g., smtp.gmail.com)
+  - If success, return 200 OK
+  - If auth error, return error message: "Invalid email or password"
+
+### 3. Upload + Send Emails
+- Route: POST /upload-excel
+  - Accepts:
+    - Excel file
+    - SMTP credentials
+    - Subject and body
+  - Parse emails from Excel using pandas
+  - Save emails to DB with status = Pending
+  - Use BackgroundTasks to:
+    - Send email one-by-one
+    - On success/failure, update DB log
+  - Use `{name}` placeholders in body if provided in Excel columns
+
+### 4. Email Logs with Pagination + Search
+- Route: GET /emails/logs?page=1&search=john
+  - Filters by current user
+  - 20 records per page
+  - Search by email address
+  - Return: totalCount, emails[], page, totalPages
+
+### 5. Delete Emails
+- Route: DELETE /emails
+  - Accepts JSON array of email IDs
+  - Deletes from DB for logged-in user
+- Optional: DELETE /emails/clear → deletes all logs for user
+
+### 6. Models & Tables
+- User (email, password_hash)
+- EmailRecord:
+  - id, recipient, status (pending/sent/failed), error, timestamp, subject, body, user_id
+
+### 7. Config & Env
+- Create config.py to load from .env:
+  - SECRET_KEY
+  - SMTP_HOST, PORT
+  - DB_URL (MongoDB/PostgreSQL)
+- Allow override SMTP details per request
+
+### 8. Security & Validation
+- Validate file type (only .xlsx)
+- Validate SMTP login before sending
+- Use async sending + BackgroundTasks
+- Sanitize body & subject fields
+
+### 9. Libraries
+- fastapi
+- pydantic
+- smtplib or yagmail
+- pandas + openpyxl
+- sqlalchemy or motor (MongoDB)
+- python-dotenv
+- bcrypt, PyJWT
+
+### 10. Deployment
+- Use Dockerfile
+- Use .env for secrets
+- Deploy on Render or Railway
+- Production settings with uvicorn + gunicorn if needed
+
+Ensure clean, modular code. Use routers, services, and models folders.
+Return meaningful responses for frontend. Support future scalability.
+
+
+
+Frontend 
+
+Build a production-ready React frontend (Vite + TailwindCSS + Redux Toolkit) for an automated email sender tool with the following features:
+
+### 1. Login Page
+- JWT-based login (email/password)
+- On success, store token in localStorage
+- Redirect to dashboard
+
+### 2. Dashboard Page
+- Upload Excel file (only .xlsx)
+- Before uploading, take SMTP input details:
+  - SMTP Email
+  - SMTP Password
+  - Email Subject
+  - Email Body (multiline with placeholder like {name})
+- Validate SMTP credentials by sending a test email from backend
+- Show appropriate toast:
+  - “SMTP connected” → continue upload
+  - “Invalid credentials” → stop
+
+### 3. Realtime Email Status View
+- After file upload, show:
+  - Table with email, status (Pending, Sent, Failed)
+  - Progress bar (X of Y sent)
+  - Toast for each result
+  - “Done” button → returns to file upload
+
+### 4. Email History Page
+- Fetch and display previous sent emails
+- Use pagination (20 records per page)
+- Add search field:
+  - On hitting Enter, send search query to backend
+  - Show filtered result (match on recipient)
+- Add checkbox to select rows
+- Add Delete Selected button → calls delete API
+- Add “Clear All” button (optional)
+
+### 5. State Management
+- Use Redux Toolkit for:
+  - Auth state
+  - SMTP config state
+  - Email sending progress
+  - Email history with pagination/search
+
+### 6. Services Layer
+- Axios instance with JWT token auto-attach
+- API methods:
+  - login()
+  - validateSMTP()
+  - uploadFile()
+  - getEmails(page, search)
+  - deleteEmails(ids)
+
+### 7. Libraries
+- react-hot-toast for toast alerts
+- react-paginate or headless pagination
+- TailwindCSS for styling
+
+### 8. Components:
+- LoginForm.jsx
+- UploadForm.jsx
+- SMTPForm.jsx
+- EmailTable.jsx
+- ProgressBar.jsx
+- SearchBar.jsx
+- Pagination.jsx
+
+Use best UI/UX practices. Ensure responsiveness. Use Tailwind utility classes. Write clean modular code.

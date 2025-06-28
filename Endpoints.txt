@@ -1,0 +1,136 @@
+# API Endpoints Documentation
+
+---
+
+## 1. Register User
+**POST** `/auth/register`
+
+**Request Body (JSON):**
+{
+  "email": "user@example.com",
+  "password": "yourpassword"
+}
+
+**Response (200):**
+{
+  "id": 1,
+  "email": "user@example.com"
+}
+
+---
+
+## 2. Login
+**POST** `/auth/login`
+
+**Request Body (form-data):**
+- username: user@example.com
+- password: yourpassword
+
+**Response (200):**
+{
+  "access_token": "<JWT_TOKEN>",
+  "token_type": "bearer"
+}
+
+---
+
+## 3. Validate SMTP Credentials
+**POST** `/smtp/validate`
+
+**Request Body (JSON):**
+{
+  "smtp_email": "shannu@gmail.com",
+  "smtp_password": "your_app_password"
+}
+
+**Response (200):**
+{
+  "message": "SMTP connected"
+}
+
+**Response (401):**
+{
+  "detail": "Invalid email or password"
+}
+
+---
+
+## 4. Upload Excel & Send Emails
+**POST** `/upload-excel`
+
+**Request Body (multipart/form-data):**
+- file: (Excel .xlsx file)
+- smtp_email: shannu@gmail.com
+- smtp_password: your_app_password
+- subject: "Hello {name}"
+- body: "Dear {name}, your code is {code}"
+
+**Headers:**
+- Authorization: Bearer <JWT_TOKEN>
+
+**Response (200):**
+{
+  "message": "10 emails queued for sending."
+}
+
+**Response (400):**
+{
+  "detail": "Only .xlsx files are allowed"
+}
+
+---
+
+## 5. Get Email Logs (Paginated & Search)
+**GET** `/emails/logs?page=1&search=john`
+
+**Headers:**
+- Authorization: Bearer <JWT_TOKEN>
+
+**Response (200):**
+{
+  "totalCount": 2,
+  "emails": [
+    {
+      "id": 1,
+      "recipient": "john@example.com",
+      "status": "sent",
+      "error": null,
+      "timestamp": "2024-06-01T12:00:00",
+      "subject": "Hello John",
+      "body": "Dear John, your code is 1234"
+    }
+  ],
+  "page": 1,
+  "totalPages": 1
+}
+
+---
+
+## 6. Delete Emails
+**DELETE** `/emails`
+
+**Request Body (JSON):**
+[1, 2, 3]
+
+**Headers:**
+- Authorization: Bearer <JWT_TOKEN>
+
+**Response (200):**
+{
+  "deleted": 3
+}
+
+---
+
+## 7. Clear All Email Logs
+**DELETE** `/emails/clear`
+
+**Headers:**
+- Authorization: Bearer <JWT_TOKEN>
+
+**Response (200):**
+{
+  "deleted": 10
+} 
+
+python -m pip install "pymongo[srv]"
