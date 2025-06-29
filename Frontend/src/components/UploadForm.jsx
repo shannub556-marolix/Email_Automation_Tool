@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
@@ -59,18 +58,15 @@ const UploadForm = ({ onBack, onUploadSuccess }) => {
       const response = await emailAPI.uploadFile(file, smtp);
       toast.success(response.message);
       
-      // Extract total count from message (e.g., "10 emails queued for sending.")
-      const totalMatch = response.message.match(/(\d+) emails queued/);
-      const total = totalMatch ? parseInt(totalMatch[1]) : 0;
-      
       dispatch(setSendingProgress({
-        total,
+        total: response.total || 0,
         sent: 0,
         failed: 0,
-        pending: total,
+        pending: response.total || 0,
+        batch_id: response.batch_id || null,
       }));
       
-      onUploadSuccess();
+      onUploadSuccess(response.batch_id);
     } catch (error) {
       const errorMessage = error.response?.data?.detail || 'Upload failed';
       toast.error(errorMessage);

@@ -13,12 +13,17 @@ import {
   Avatar,
   Chip,
   CircularProgress,
+  ToggleButton,
+  ToggleButtonGroup,
 } from '@mui/material';
 import {
   History as HistoryIcon,
   Delete as DeleteIcon,
   Refresh as RefreshIcon,
   ClearAll as ClearAllIcon,
+  Error as ErrorIcon,
+  CheckCircle as CheckCircleIcon,
+  Schedule as ScheduleIcon,
 } from '@mui/icons-material';
 import {
   setEmails,
@@ -42,12 +47,24 @@ const EmailHistoryPage = () => {
   } = useSelector((state) => state.email);
 
   const [deleting, setDeleting] = useState(false);
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const fetchEmails = async (page = 1, search = '') => {
+  const fetchEmails = async (page = 1, search = '', status = 'all') => {
     dispatch(setLoading(true));
     try {
       const response = await emailAPI.getLogs(page, search);
-      dispatch(setEmails(response));
+      
+      // Apply status filter on frontend for now
+      let filteredEmails = response.emails || [];
+      if (status !== 'all') {
+        filteredEmails = filteredEmails.filter(email => email.status === status);
+      }
+      
+      dispatch(setEmails({
+        ...response,
+        emails: filteredEmails,
+        totalCount: response.totalCount
+      }));
     } catch (error) {
       toast.error('Failed to fetch emails');
     } finally {
@@ -56,13 +73,20 @@ const EmailHistoryPage = () => {
   };
 
   useEffect(() => {
-    fetchEmails(currentPage, searchQuery);
-  }, [currentPage]);
+    fetchEmails(currentPage, searchQuery, statusFilter);
+  }, [currentPage, statusFilter]);
 
   const handleSearch = (query) => {
     dispatch(setSearchQuery(query));
     dispatch(setCurrentPage(1));
-    fetchEmails(1, query);
+    fetchEmails(1, query, statusFilter);
+  };
+
+  const handleStatusFilterChange = (event, newStatus) => {
+    if (newStatus !== null) {
+      setStatusFilter(newStatus);
+      dispatch(setCurrentPage(1));
+    }
   };
 
   const handlePageChange = (page) => {
@@ -84,7 +108,7 @@ const EmailHistoryPage = () => {
       const response = await emailAPI.deleteEmails(selectedEmails);
       toast.success(`${response.deleted} emails deleted successfully`);
       dispatch(clearSelection());
-      fetchEmails(currentPage, searchQuery);
+      fetchEmails(currentPage, searchQuery, statusFilter);
     } catch (error) {
       toast.error('Failed to delete emails');
     } finally {
@@ -102,9 +126,10 @@ const EmailHistoryPage = () => {
       const response = await emailAPI.clearAll();
       toast.success(`${response.deleted} emails deleted successfully`);
       dispatch(clearSelection());
-      fetchEmails(1, '');
+      fetchEmails(1, '', 'all');
       dispatch(setCurrentPage(1));
       dispatch(setSearchQuery(''));
+      setStatusFilter('all');
     } catch (error) {
       toast.error('Failed to clear all emails');
     } finally {
@@ -113,7 +138,7 @@ const EmailHistoryPage = () => {
   };
 
   const handleRefresh = () => {
-    fetchEmails(currentPage, searchQuery);
+    fetchEmails(currentPage, searchQuery, statusFilter);
     toast.success('Email history refreshed');
   };
 
@@ -143,7 +168,7 @@ const EmailHistoryPage = () => {
                   Email History
                 </Typography>
                 <Chip
-                  label={`Total: ${totalCount} emails sent`}
+                  label={`Total: ${totalCount} emails`}
                   sx={{ mt: 1, bgcolor: 'rgba(255,255,255,0.2)', color: 'white' }}
                 />
               </Box>
@@ -183,8 +208,60 @@ const EmailHistoryPage = () => {
           </Box>
 
           <Box sx={{ p: 3 }}>
-            <Box sx={{ mb: 3 }}>
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               <SearchBar onSearch={handleSearch} />
+              
+              <ToggleButtonGroup
+                value={statusFilter}
+                exclusive
+                onChange={handleStatusFilterChange}
+                size="small"
+                sx={{ bgcolor: 'white' }}
+              >
+                <ToggleButton value="all" sx={{ px: 2 }}>
+                  <Typography variant="body2">All</Typography>
+                </ToggleButton>
+                <ToggleButton value="sent" sx={{ px: 2, color: 'success.main' }}>
+                  <CheckCircleIcon sx={{ mr: 1, fontSize: 16 }} />
+                  <Typography variant="body2">Sent</Typography>
+                </ToggleButton>
+                <ToggleButton value="failed" sx={{ px: 2, color: 'error.main' }}>
+                  <ErrorIcon sx={{ mr: 1, fontSize: 16 }} />
+                  <Typography variant="body2">Failed</Typography>
+                </ToggleButton>
+                <ToggleButton value="pending" sx={{ px: 2, color: 'warning.main' }}>
+                  <ScheduleIcon sx={{ mr: 1, fontSize: 16 }} />
+                  <Typography variant="body2">Pending</Typography>
+                </ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+
+            {/* Email Statistics */}
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+              <Paper elevation={1} sx={{ p: 2, minWidth: 120, textAlign: 'center' }}>
+                <Typography variant="h6" color="success.main" fontWeight="bold">
+                  {emails.filter(e => e.status === 'sent').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Sent
+                </Typography>
+              </Paper>
+              <Paper elevation={1} sx={{ p: 2, minWidth: 120, textAlign: 'center' }}>
+                <Typography variant="h6" color="error.main" fontWeight="bold">
+                  {emails.filter(e => e.status === 'failed').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Failed
+                </Typography>
+              </Paper>
+              <Paper elevation={1} sx={{ p: 2, minWidth: 120, textAlign: 'center' }}>
+                <Typography variant="h6" color="warning.main" fontWeight="bold">
+                  {emails.filter(e => e.status === 'pending').length}
+                </Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Pending
+                </Typography>
+              </Paper>
             </Box>
 
             {loading ? (

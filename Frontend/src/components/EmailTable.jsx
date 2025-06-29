@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import {
@@ -6,6 +5,9 @@ import {
   selectAllEmails,
   clearSelection,
 } from '../store/slices/emailSlice';
+import dayjs from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+dayjs.extend(utc);
 
 const EmailTable = ({ emails }) => {
   const dispatch = useDispatch();
@@ -46,9 +48,7 @@ const EmailTable = ({ emails }) => {
     }
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleString();
-  };
+  const currentTime = dayjs().format('DD-MM-YYYY HH:mm:ss');
 
   if (emails.length === 0) {
     return (
@@ -63,7 +63,7 @@ const EmailTable = ({ emails }) => {
 
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200">
+      <table className="min-w-full divide-y divide-gray-200" style={{ width: '100%' }}>
         <thead className="bg-gray-50">
           <tr>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -89,9 +89,6 @@ const EmailTable = ({ emails }) => {
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Timestamp
             </th>
-            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Error
-            </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
@@ -115,12 +112,7 @@ const EmailTable = ({ emails }) => {
                 {getStatusBadge(email.status)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {formatDate(email.timestamp)}
-              </td>
-              <td className="px-6 py-4">
-                <div className="text-sm text-red-600 max-w-xs truncate">
-                  {email.error || '-'}
-                </div>
+                {email.timestamp ? dayjs(email.timestamp).format('DD-MM-YYYY HH:mm:ss') : '-'}
               </td>
             </tr>
           ))}

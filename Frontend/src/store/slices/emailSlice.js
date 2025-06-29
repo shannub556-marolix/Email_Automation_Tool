@@ -1,4 +1,3 @@
-
 import { createSlice } from '@reduxjs/toolkit';
 
 const initialState = {
@@ -45,14 +44,11 @@ const emailSlice = createSlice({
       state.sendingProgress = action.payload;
     },
     updateProgress: (state, action) => {
-      const { status } = action.payload;
-      if (status === 'sent') {
-        state.sendingProgress.sent += 1;
-        state.sendingProgress.pending -= 1;
-      } else if (status === 'failed') {
-        state.sendingProgress.failed += 1;
-        state.sendingProgress.pending -= 1;
-      }
+      const { sent, failed, pending, total } = action.payload;
+      if (sent !== undefined) state.sendingProgress.sent = sent;
+      if (failed !== undefined) state.sendingProgress.failed = failed;
+      if (pending !== undefined) state.sendingProgress.pending = pending;
+      if (total !== undefined) state.sendingProgress.total = total;
     },
     setSearchQuery: (state, action) => {
       state.searchQuery = action.payload;

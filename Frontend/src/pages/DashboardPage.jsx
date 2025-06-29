@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import SMTPForm from '../components/SMTPForm';
 import UploadForm from '../components/UploadForm';
@@ -21,6 +20,7 @@ import {
 
 const DashboardPage = () => {
   const [currentView, setCurrentView] = useState('smtp');
+  const [currentBatchId, setCurrentBatchId] = useState(null);
 
   const getActiveStep = () => {
     switch (currentView) {
@@ -91,12 +91,15 @@ const DashboardPage = () => {
             {currentView === 'upload' && (
               <UploadForm 
                 onBack={() => setCurrentView('smtp')}
-                onUploadSuccess={() => setCurrentView('status')}
+                onUploadSuccess={(batchId) => {
+                  setCurrentBatchId(batchId);
+                  setCurrentView('status');
+                }}
               />
             )}
             
             {currentView === 'status' && (
-              <EmailStatusView onDone={() => setCurrentView('smtp')} />
+              <EmailStatusView batchId={currentBatchId} onDone={() => setCurrentView('smtp')} />
             )}
           </Box>
         </Paper>

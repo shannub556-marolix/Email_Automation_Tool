@@ -1,67 +1,87 @@
-
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
 import ProgressBar from './ProgressBar';
-import { updateProgress, resetProgress } from '../store/slices/emailSlice';
+import { updateProgress, resetProgress, setEmails } from '../store/slices/emailSlice';
+import { emailAPI } from '../services/api';
 
-const EmailStatusView = ({ onDone }) => {
+const EmailStatusView = ({ batchId, onDone }) => {
   const dispatch = useDispatch();
   const { sendingProgress } = useSelector((state) => state.email);
-  const [emails, setEmails] = useState([]);
   const [isComplete, setIsComplete] = useState(false);
+  const intervalRef = useRef(null);
+  const totalRef = useRef(sendingProgress.total);
+  const isPollingRef = useRef(false);
 
-  // Simulate real-time email status updates
+  // Update ref when total changes
   useEffect(() => {
-    if (sendingProgress.total === 0) return;
+    totalRef.current = sendingProgress.total;
+  }, [sendingProgress.total]);
 
-    // Generate mock email data
-    const mockEmails = Array.from({ length: sendingProgress.total }, (_, i) => ({
-      id: i + 1,
-      email: `user${i + 1}@example.com`,
-      status: 'pending',
-      error: null,
-    }));
-    setEmails(mockEmails);
+  // Create a stable polling function using useRef
+  const pollEmailStatusRef = useRef(async () => {
+    if (totalRef.current === 0) return;
 
-    // Simulate email sending process
-    const interval = setInterval(() => {
-      setEmails((prevEmails) => {
-        const pendingEmails = prevEmails.filter(email => email.status === 'pending');
+    try {
+      const statusResponse = await emailAPI.getEmailStatus(batchId);
+      
+      // Update progress with real data from backend
+      dispatch(updateProgress({ 
+        sent: statusResponse.sent || 0, 
+        failed: statusResponse.failed || 0, 
+        pending: statusResponse.pending || 0,
+        total: statusResponse.total || totalRef.current 
+      }));
+
+      // Check if all emails are processed
+      const totalProcessed = (statusResponse.sent || 0) + (statusResponse.failed || 0);
+      // Stop polling if pending is zero or all processed
+      if (((statusResponse.pending === 0 && totalRef.current > 0) || totalProcessed === totalRef.current) && totalRef.current > 0) {
+        setIsComplete(true);
+        isPollingRef.current = false;
         
-        if (pendingEmails.length === 0) {
-          setIsComplete(true);
-          clearInterval(interval);
-          return prevEmails;
+        // Clear the interval
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
         }
-
-        const emailToUpdate = pendingEmails[0];
-        const success = Math.random() > 0.1; // 90% success rate
-        const newStatus = success ? 'sent' : 'failed';
-        const error = success ? null : 'SMTP connection failed';
-
-        // Update Redux state
-        dispatch(updateProgress({ status: newStatus }));
         
-        // Show toast notification
-        if (success) {
-          toast.success(`Email sent to ${emailToUpdate.email}`);
+        // Show completion message
+        if (statusResponse.failed > 0) {
+          toast.error(`${statusResponse.failed} emails failed to send. Check email history for details.`);
         } else {
-          toast.error(`Failed to send email to ${emailToUpdate.email}`);
+          toast.success('All emails sent successfully!');
         }
+      }
+    } catch (error) {
+      console.error('Error polling email status:', error);
+    }
+  });
 
-        return prevEmails.map(email =>
-          email.id === emailToUpdate.id
-            ? { ...email, status: newStatus, error }
-            : email
-        );
-      });
-    }, 1000); // Update every second
+  // Start polling when component mounts or when total changes
+  useEffect(() => {
+    if (sendingProgress.total > 0 && !isPollingRef.current) {
+      isPollingRef.current = true;
+      intervalRef.current = setInterval(() => pollEmailStatusRef.current(), 2000); // Poll every 2 seconds
+    }
 
-    return () => clearInterval(interval);
-  }, [sendingProgress.total, dispatch]);
+    // Cleanup function
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      isPollingRef.current = false;
+    };
+  }, [sendingProgress.total]);
 
   const handleDone = () => {
+    // Clear interval if still running
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    isPollingRef.current = false;
     dispatch(resetProgress());
     onDone();
   };
@@ -126,26 +146,43 @@ const EmailStatusView = ({ onDone }) => {
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <div className="px-4 py-5 sm:p-6">
-          <h4 className="text-lg font-medium text-gray-900 mb-4">Email Status</h4>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-medium text-gray-900">Email Status</h4>
+            {!isComplete && (
+              <div className="flex items-center text-sm text-gray-500">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                Updating...
+              </div>
+            )}
+          </div>
           
-          <div className="max-h-96 overflow-y-auto">
-            <div className="space-y-2">
-              {emails.map((email) => (
-                <div
-                  key={email.id}
-                  className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                >
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-gray-900">{email.email}</p>
-                    {email.error && (
-                      <p className="text-xs text-red-600 mt-1">{email.error}</p>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    {getStatusBadge(email.status, email.error)}
-                  </div>
+          <div className="text-center py-8">
+            <div className="space-y-4">
+              <div className="flex justify-center space-x-8">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-green-600">{sendingProgress.sent}</div>
+                  <div className="text-sm text-gray-500">Sent</div>
                 </div>
-              ))}
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-red-600">{sendingProgress.failed}</div>
+                  <div className="text-sm text-gray-500">Failed</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-yellow-600">{sendingProgress.pending}</div>
+                  <div className="text-sm text-gray-500">Pending</div>
+                </div>
+              </div>
+              
+              {isComplete && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-600">
+                    {sendingProgress.failed > 0 
+                      ? `${sendingProgress.failed} emails failed to send. Check the email history page for details.`
+                      : 'All emails sent successfully!'
+                    }
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

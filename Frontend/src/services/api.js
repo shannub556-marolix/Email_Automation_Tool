@@ -1,4 +1,3 @@
-
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { config } from '../config/env';
@@ -81,6 +80,15 @@ export const emailAPI = {
         'Content-Type': 'multipart/form-data',
       },
     });
+    return response.data;
+  },
+
+  getEmailStatus: async (batchId) => {
+    let url = '/emails/status';
+    if (batchId) {
+      url += `?batch_id=${batchId}`;
+    }
+    const response = await api.get(url);
     return response.data;
   },
 

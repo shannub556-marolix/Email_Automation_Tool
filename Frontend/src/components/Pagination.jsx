@@ -1,4 +1,3 @@
-
 import React from 'react';
 import ReactPaginate from 'react-paginate';
 
@@ -21,7 +20,7 @@ const Pagination = ({ currentPage, totalPages, onPageChange }) => {
         className="flex items-center space-x-2"
         pageClassName="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 cursor-pointer"
         pageLinkClassName="block"
-        activeClassName="bg-blue-500 text-white rounded-md"
+        activeClassName="bg-blue-500 text-white rounded-md font-bold border-2 border-blue-700 shadow"
         previousClassName="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 cursor-pointer"
         nextClassName="px-3 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 cursor-pointer"
         disabledClassName="opacity-50 cursor-not-allowed"
