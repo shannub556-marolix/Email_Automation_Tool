@@ -7,7 +7,9 @@ import {
 } from '../store/slices/emailSlice';
 import dayjs from 'dayjs';
 import utc from 'dayjs/plugin/utc';
+import timezone from 'dayjs/plugin/timezone';
 dayjs.extend(utc);
+dayjs.extend(timezone);
 
 const EmailTable = ({ emails }) => {
   const dispatch = useDispatch();
@@ -112,7 +114,7 @@ const EmailTable = ({ emails }) => {
                 {getStatusBadge(email.status)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {email.timestamp ? dayjs(email.timestamp).format('DD-MM-YYYY HH:mm:ss') : '-'}
+                {email.timestamp ? dayjs(email.timestamp).add(5, 'hour').add(30, 'minute').format('DD-MM-YYYY HH:mm:ss') : '-'}
               </td>
             </tr>
           ))}

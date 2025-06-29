@@ -12,6 +12,7 @@ const EmailStatusView = ({ batchId, onDone }) => {
   const intervalRef = useRef(null);
   const totalRef = useRef(sendingProgress.total);
   const isPollingRef = useRef(false);
+  const hasShownToastRef = useRef(false);
 
   // Update ref when total changes
   useEffect(() => {
@@ -45,12 +46,14 @@ const EmailStatusView = ({ batchId, onDone }) => {
           clearInterval(intervalRef.current);
           intervalRef.current = null;
         }
-        
-        // Show completion message
-        if (statusResponse.failed > 0) {
-          toast.error(`${statusResponse.failed} emails failed to send. Check email history for details.`);
-        } else {
-          toast.success('All emails sent successfully!');
+        // Only show toast once
+        if (!hasShownToastRef.current) {
+          if (statusResponse.failed > 0) {
+            toast.error(`${statusResponse.failed} emails failed to send. Check email history for details.`);
+          } else {
+            toast.success('All emails sent successfully!');
+          }
+          hasShownToastRef.current = true;
         }
       }
     } catch (error) {
@@ -64,7 +67,8 @@ const EmailStatusView = ({ batchId, onDone }) => {
       isPollingRef.current = true;
       intervalRef.current = setInterval(() => pollEmailStatusRef.current(), 2000); // Poll every 2 seconds
     }
-
+    // Reset toast shown state only when batchId changes
+    hasShownToastRef.current = false;
     // Cleanup function
     return () => {
       if (intervalRef.current) {
@@ -73,7 +77,7 @@ const EmailStatusView = ({ batchId, onDone }) => {
       }
       isPollingRef.current = false;
     };
-  }, [sendingProgress.total]);
+  }, [sendingProgress.total, batchId]);
 
   const handleDone = () => {
     // Clear interval if still running
@@ -146,19 +150,22 @@ const EmailStatusView = ({ batchId, onDone }) => {
 
       <div className="bg-white shadow overflow-hidden sm:rounded-md">
         <div className="px-4 py-5 sm:p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h4 className="text-lg font-medium text-gray-900">Email Status</h4>
-            {!isComplete && (
-              <div className="flex items-center text-sm text-gray-500">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
-                Updating...
-              </div>
-            )}
-          </div>
+        <div className="flex items-center text-sm text-gray-900 font-medium">
+  <h4 className="text-lg mr-2">Email Status:</h4>
+
+  {!isComplete && (
+    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+  )}
+
+  <span className={isComplete ? 'text-green-600' : 'text-gray-500'}>
+    {isComplete ? 'Completed' : 'Pending...'}
+  </span>
+</div>
+
           
           <div className="text-center py-8">
             <div className="space-y-4">
-              <div className="flex justify-center space-x-8">
+              {/* <div className="flex justify-center space-x-8">
                 <div className="text-center">
                   <div className="text-2xl font-bold text-green-600">{sendingProgress.sent}</div>
                   <div className="text-sm text-gray-500">Sent</div>
@@ -171,7 +178,7 @@ const EmailStatusView = ({ batchId, onDone }) => {
                   <div className="text-2xl font-bold text-yellow-600">{sendingProgress.pending}</div>
                   <div className="text-sm text-gray-500">Pending</div>
                 </div>
-              </div>
+              </div> */}
               
               {isComplete && (
                 <div className="mt-4">
